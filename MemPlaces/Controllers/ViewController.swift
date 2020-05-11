@@ -10,8 +10,17 @@ import UIKit
 import MapKit
 import CoreLocation
 
+protocol AddNewPlaceDelegate {
+    func userEnteredAPlace(place : Places)
+}
+
 class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDelegate {
 
+    var delegate : AddNewPlaceDelegate?
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
+    var selectedPlace: Places?
+    
     @IBOutlet weak var map: MKMapView!
     
     var manager = CLLocationManager()
@@ -24,7 +33,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         uilpgr.minimumPressDuration = 2
         map.addGestureRecognizer(uilpgr)
         
-        if activePlace == -1 {
+        if selectedPlace == nil {
             
             manager.delegate = self
             manager.desiredAccuracy = kCLLocationAccuracyBest
@@ -34,42 +43,30 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         }else{
             // Get Place details to display on Map
             
-            if places.count > activePlace {
-                
-                if let name = places[activePlace]["name"] {
-                    
-                    if let lat = places[activePlace]["lat"] {
-                        
-                        if let lon = places[activePlace]["lon"] {
-                            
+            if selectedPlace != nil {
+                if let name = selectedPlace!.name {
+                    if let lat = selectedPlace?.lat {
+                        if let lon = selectedPlace?.lon {
                             if let latitude = Double(lat) {
-                            
                                 if let longitude = Double(lon) {
-                                    
                                     let span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                                    
+
                                     let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-                                    
+
                                     let region = MKCoordinateRegion(center: coordinate, span: span)
-                                    
+
                                     self.map.setRegion(region, animated: true)
-                                    
+
                                     let annotation = MKPointAnnotation()
                                     annotation.coordinate = coordinate
                                     annotation.title = name
-                                    
+
                                     self.map.addAnnotation(annotation)
-                                    
                                 }
-                                
                             }
-                            
                         }
-                        
                     }
-                    
                 }
-                
             }
             
         }
@@ -106,8 +103,13 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
                 if title == "" {
                     title = "Added \(NSDate())"
                 }
-                places.append(["name" : title, "lat":String(newCoordinate.latitude), "lon" : String(newCoordinate.longitude)])
-                UserDefaults.standard.set(places, forKey: "places")
+                let newPlace = Places(context: self.context)
+                newPlace.name = title
+                newPlace.lat = String(newCoordinate.latitude)
+                newPlace.lon = String(newCoordinate.longitude)
+                
+                self.delegate?.userEnteredAPlace(place: newPlace)
+
             }
             
             let annotation = MKPointAnnotation()
